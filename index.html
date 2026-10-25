@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; manifest-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Подход">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<title>Подход</title></head>
+<body><div id="app">
+<header><p class="eyebrow" id="phase"></p><h1>Подход</h1><p id="notice" class="notice" hidden></p></header>
+<nav id="tabs" class="tabs" aria-label="Тренировочные дни"></nav>
+<section class="panel"><div class="panel-top"><div><div class="day-title" id="dayTitle"></div><div class="muted" id="dayMeta"></div></div><div class="ring" id="ring"><span id="ringText">0</span></div></div><div class="bar"><i id="bar"></i></div></section>
+<main id="exercises"></main>
+<button class="finish" id="finish">Завершить тренировку</button>
+<section class="panel"><h2>Данные</h2>
+<label class="field">Начало цикла<input id="start" type="date"></label>
+<div class="buttons"><button class="soft" id="export">Экспорт</button><button class="soft" id="import">Импорт</button></div>
+<input hidden id="file" type="file" accept="application/json,.json">
+<h3>История</h3><div id="history" class="history"></div>
+<p class="muted small">Данные хранятся только на этом устройстве. Импортируй только собственные копии.</p></section>
+</div>
+<div class="dock" id="dock"><div class="dock-main"><div><div class="muted" id="timerLabel">Отдых</div><div class="clock" id="clock">03:00</div></div><div class="dock-actions"><button class="soft" id="restart">3 мин</button><button class="soft" id="skip">Пропустить</button></div></div><div class="bar timer-bar"><i id="timerBar"></i></div></div>
+<script src="app.js"></script></body></html>
