@@ -1,1 +1,1 @@
-{"name": "Подход — дневник тренировок", "short_name": "Подход", "lang": "ru", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#000000", "theme_color": "#000000", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
+{"name": "Подход", "short_name": "Подход", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#000000", "theme_color": "#000000", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]}

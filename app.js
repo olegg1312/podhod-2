@@ -1,101 +1,40 @@
 "use strict";
-const PLAN=[["Грудь", "Грудь и трицепс", [["Жим в хаммере", 1, 6, 10, "100"], ["Жим в хаммере вверх", 1, 8, 12, ""], ["Бабочка", 0, 10, 15, ""], ["Французский жим EZ", 0, 8, 12, ""], ["Разгибания на блоке", 0, 10, 15, ""], ["Скручивания в тренажёре", 0, 10, 20, ""]]], ["Спина", "Спина и бицепс", [["Верхний блок широким хватом", 1, 8, 12, ""], ["Горизонтальная тяга", 1, 8, 12, ""], ["Верхний блок узким хватом", 1, 10, 15, ""], ["Бицепс с EZ-грифом", 0, 8, 12, ""], ["Бицепс на скамье Скотта", 0, 10, 15, ""]]], ["Плечи", "Плечи и трицепс", [["Жим над головой в тренажёре", 1, 6, 10, ""], ["Махи в тренажёре", 0, 10, 15, ""], ["Обратная бабочка", 0, 12, 20, ""], ["Разгибания сидя в тренажёре", 0, 10, 15, ""]]], ["Ноги", "Ноги и бицепс", [["Жим ногами", 1, 8, 12, ""], ["Сгибания ног", 0, 10, 15, ""], ["Разгибания ног", 0, 10, 15, ""], ["Икры стоя", 0, 10, 15, ""], ["Икры сидя", 0, 12, 20, ""], ["Бицепс в тренажёре", 0, 10, 15, ""], ["Сведение ног", 0, 12, 20, ""]]]];
-const KEY="podhod-v1",REST=180000,PHASES=[[2,3],[3,3],[3,4],[4,4]];
-const WRE=/^\d{0,4}([.]\d{0,2})?$/,RRE=/^\d{0,3}$/,DRE=/^\d{4}-\d{2}-\d{2}$/;
-const $=id=>document.getElementById(id);
-function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n}
-function pad(n){return String(n).padStart(2,"0")}
-function todayStr(){const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
-function parseDate(s){if(!DRE.test(s))return null;const[y,m,d]=s.split("-").map(Number),x=new Date(y,m-1,d);return x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d?x:null}
-function isNum(s,re){return typeof s==="string"&&re.test(s)}
-function cleanRow(r){if(!r||typeof r!=="object")return null;if(!isNum(r.w,WRE)||!isNum(r.r,RRE)||typeof r.done!=="boolean")return null;return{w:r.w,r:r.r,done:r.done}}
-function cleanExercises(list,d){if(!Array.isArray(list)||list.length!==PLAN[d][2].length)return null;const out=[];for(const e of list){if(!e||!Array.isArray(e.rows)||e.rows.length<1||e.rows.length>6)return null;const rows=e.rows.map(cleanRow);if(rows.some(x=>!x))return null;out.push({rows,suggested:e.suggested===true,added:e.added===true})}return out}
-function cleanState(v){
- if(!v||typeof v!=="object"||v.version!==1||!parseDate(v.start)||!Number.isInteger(v.day)||v.day<0||v.day>3||!Array.isArray(v.history)||v.history.length>2000)return null;
+const PLAN=[["Грудь и трицепс", [["Жим в хаммере", 1, 6, 10, "100"], ["Жим в хаммере вверх", 1, 8, 12, ""], ["Бабочка", 0, 10, 15, ""], ["Французский жим EZ", 0, 8, 12, ""], ["Разгибания на блоке", 0, 10, 15, ""], ["Скручивания", 0, 10, 20, ""]]], ["Спина и бицепс", [["Верхний блок широким", 1, 8, 12, ""], ["Горизонтальная тяга", 1, 8, 12, ""], ["Верхний блок узким", 1, 10, 15, ""], ["Бицепс EZ", 0, 8, 12, ""], ["Бицепс на Скотте", 0, 10, 15, ""]]], ["Плечи и трицепс", [["Жим над головой", 1, 6, 10, ""], ["Махи в тренажёре", 0, 10, 15, ""], ["Обратная бабочка", 0, 12, 20, ""], ["Разгибания сидя", 0, 10, 15, ""]]], ["Ноги и бицепс", [["Жим ногами", 1, 8, 12, ""], ["Сгибание ног", 0, 10, 15, ""], ["Разгибание ног", 0, 10, 15, ""], ["Икры стоя", 0, 10, 15, ""], ["Икры сидя", 0, 12, 20, ""], ["Бицепс в тренажёре", 0, 10, 15, ""], ["Сведение ног", 0, 12, 20, ""]]]],KEY='podhod-v1',$=id=>document.getElementById(id),stages=[[2,3],[3,3],[3,4],[4,4]];
+const today=()=>{let d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function node(tag,cls,text){let n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n}
+function dateOK(x){return typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&!isNaN(Date.parse(x))&&new Date(x).toISOString().slice(0,10)===x}
+function validNum(v,rep=false){return typeof v==='string'&&(rep?/^\d{0,3}$/:/^\d{0,4}(\.\d{0,2})?$/).test(v)}
+function clean(v){
+ if(!v||v.version!==1||!dateOK(v.start)||!Number.isInteger(v.day)||v.day<0||v.day>3||!Array.isArray(v.history)||v.history.length>2000)throw Error('Формат');
  const s={version:1,start:v.start,day:v.day,history:[],drafts:{},config:{},timerEnd:null};
- for(const h of v.history){if(!h||!Number.isInteger(h.day)||h.day<0||h.day>3||typeof h.time!=="string"||isNaN(Date.parse(h.time)))return null;const ex=cleanExercises(h.exercises,h.day);if(!ex)return null;s.history.push({day:h.day,time:new Date(h.time).toISOString(),phase:Number.isInteger(h.phase)&&h.phase>=0&&h.phase<=3?h.phase:0,exercises:ex})}
- if(v.drafts&&typeof v.drafts==="object")for(const d of [0,1,2,3]){const x=v.drafts[d];if(!x)continue;const ex=cleanExercises(x.exercises,d);if(ex&&parseDate(x.date))s.drafts[d]={date:x.date,phase:Number.isInteger(x.phase)&&x.phase>=0&&x.phase<=3?x.phase:0,exercises:ex}}
- if(v.config&&typeof v.config==="object")for(const d of [0,1,2,3])PLAN[d][2].forEach((_,i)=>{const c=v.config[d+"-"+i];if(c&&c.step!==null&&c.step!==undefined&&Number.isFinite(Number(c.step))&&Number(c.step)>0&&Number(c.step)<=100)s.config[d+"-"+i]={step:Number(c.step)}});
- if(Number.isFinite(v.timerEnd)&&v.timerEnd>Date.now()&&v.timerEnd<Date.now()+REST+5000)s.timerEnd=v.timerEnd;
- return s}
-let state={version:1,start:todayStr(),day:0,history:[],drafts:{},config:{},timerEnd:null},storageOK=true;
-try{const raw=localStorage.getItem(KEY);if(raw){if(raw.length>1500000)throw 0;const c=cleanState(JSON.parse(raw));if(c)state=c;else throw 0}}catch(e){if(localStorage.getItem(KEY)){storageOK=false;notice("Сохранённые данные повреждены и не загружены. Не экспортируй их поверх старой копии.")}}
-function notice(t){const n=$("notice");n.textContent=t;n.hidden=!t}
-function save(){if(!storageOK)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){storageOK=false;notice("Не удалось сохранить данные. Сделай экспорт.")}}
-function phase(){const s=parseDate(state.start),t=new Date();const a=new Date(t.getFullYear(),t.getMonth(),t.getDate());const days=Math.max(0,Math.round((a-s)/86400000));const week=Math.floor(days/7)+1;const p=Math.min(3,Math.floor((week-1)/2));return{week,p,sets:PHASES[p]}}
-function last(d){for(let i=state.history.length-1;i>=0;i--)if(state.history[i].day===d)return state.history[i];return null}
-function ensureDraft(){
- const d=state.day;if(state.drafts[d])return state.drafts[d];
- const ph=phase(),prevWorkout=last(d);
- const exercises=PLAN[d][2].map((ex,i)=>{
-  const n=ph.sets[ex[1]],prev=prevWorkout&&prevWorkout.exercises[i],step=(state.config[d+"-"+i]||{}).step;
-  let w=prev?prev.rows[0].w:ex[4];
-  const sameW=prev&&prev.rows.every(r=>r.done&&r.w===prev.rows[0].w&&Number(r.w)>0&&Number(r.r)>=ex[3]);
-  const suggested=!!(sameW&&n<=prev.rows.length&&step>0);
-  if(suggested)w=String(Math.round((Number(w)+step)*100)/100);
-  return{rows:Array.from({length:n},()=>({w,r:"",done:false})),suggested,added:!!(prev&&n>prev.rows.length)}});
- state.drafts[d]={date:todayStr(),phase:ph.p,exercises};save();return state.drafts[d]}
-function render(){
- const d=state.day,ph=phase(),draft=ensureDraft(),prevWorkout=last(d);
- $("start").value=state.start;
- $("phase").textContent="Неделя "+ph.week+" · этап "+(ph.p+1)+"/4"+(ph.week>8?" · цикл завершён":"");
- const tabs=$("tabs");tabs.replaceChildren();
- PLAN.forEach((p,i)=>{const b=el("button","tab"+(i===d?" active":""),p[0]);b.dataset.day=i;b.setAttribute("aria-pressed",String(i===d));tabs.append(b)});
- $("dayTitle").textContent=PLAN[d][1];
- $("dayMeta").textContent="Изоляция "+ph.sets[0]+" · основные "+ph.sets[1]+" подхода";
- const root=$("exercises");root.replaceChildren();
- PLAN[d][2].forEach((ex,i)=>{
-  const de=draft.exercises[i],prev=prevWorkout&&prevWorkout.exercises[i],card=el("section","card");
-  const head=el("div","card-head");const left=el("div");left.append(el("h2","",ex[0]),el("div","muted",de.rows.length+" × "+ex[2]+"–"+ex[3]));head.append(left,el("span","badge"+(ex[1]?" main":""),ex[1]?"Основное":"Изоляция"));card.append(head);
-  card.append(el("div","muted small prev","Прошлый раз: "+(prev?prev.rows.map(r=>(r.w||"—")+" кг × "+(r.r||"—")).join(" / "):"нет записи")));
-  if(de.suggested)card.append(el("p","hint","Все подходы дошли до верхней границы — предложена прибавка веса."));
-  if(de.added)card.append(el("p","hint add","Добавлен подход — вес сохранён, цель: все подходы до верха диапазона."));
-  const sh=el("div","set-head");["№","Вес, кг","Повторы",""].forEach(t=>sh.append(el("span","",t)));card.append(sh);
-  de.rows.forEach((r,j)=>{
-   const row=el("div","set"+(r.done?" done":""));row.append(el("span","num",String(j+1)));
-   for(const f of ["w","r"]){const inp=el("input");inp.type="text";inp.inputMode=f==="w"?"decimal":"numeric";inp.autocomplete="off";inp.maxLength=f==="w"?7:3;inp.value=r[f];inp.dataset.i=i;inp.dataset.j=j;inp.dataset.f=f;inp.setAttribute("aria-label",(f==="w"?"Вес":"Повторы")+", "+ex[0]+", подход "+(j+1));row.append(inp)}
-   const t=el("button","tick",r.done?"✓":"○");t.dataset.i=i;t.dataset.j=j;t.setAttribute("aria-label","Отметить подход "+(j+1));row.append(t);card.append(row)});
-  const sr=el("label","step");sr.append(el("span","","Шаг прибавки, кг"));const si=el("input");si.type="text";si.inputMode="decimal";si.placeholder="2.5";si.maxLength=6;si.dataset.step=i;si.value=(state.config[d+"-"+i]||{}).step||"";sr.append(si);card.append(sr);root.append(card)});
- progress();
- const h=$("history");h.replaceChildren();state.history.slice(-30).reverse().forEach(x=>{const sets=x.exercises.reduce((a,e)=>a+e.rows.filter(r=>r.done).length,0);h.append(el("p","",new Date(x.time).toLocaleDateString("ru")+" · "+PLAN[x.day][1]+" · "+sets+" подх."))});
- if(!state.history.length)h.append(el("p","","Пока пусто"));
+ function exercises(xs,d){if(!Array.isArray(xs)||xs.length!==PLAN[d][1].length)throw Error('Упражнения');return xs.map(e=>{if(!e||!Array.isArray(e.rows)||e.rows.length<1||e.rows.length>6)throw Error('Подходы');return{rows:e.rows.map(r=>{if(!r||!validNum(r.w)||!validNum(r.r,true)||typeof r.done!=='boolean')throw Error('Числа');return{w:r.w,r:r.r,done:r.done}}),suggested:e.suggested===true,added:e.added===true}})}
+ for(const h of v.history){if(!h||!Number.isInteger(h.day)||h.day<0||h.day>3||typeof h.time!=='string'||!Number.isFinite(Date.parse(h.time)))throw Error('История');s.history.push({day:h.day,time:new Date(h.time).toISOString(),phase:Number.isInteger(h.phase)?Math.max(0,Math.min(3,h.phase)):0,exercises:exercises(h.exercises,h.day)})}
+ for(let d=0;d<4;d++){let dr=v.drafts?.[d];if(dr){if(!dateOK(dr.date))throw Error('Дата');s.drafts[d]={date:dr.date,phase:Number.isInteger(dr.phase)?Math.max(0,Math.min(3,dr.phase)):0,exercises:exercises(dr.exercises,d)}}PLAN[d][1].forEach((e,i)=>{let n=v.config?.[d+'-'+i]?.step;if(n!==null&&n!==undefined){if(typeof n!=='number'||!Number.isFinite(n)||n<=0||n>100)throw Error('Шаг');s.config[d+'-'+i]={step:n}}})}
+ if(typeof v.timerEnd==='number'&&v.timerEnd>Date.now()&&v.timerEnd<=Date.now()+185000)s.timerEnd=v.timerEnd;return s
 }
-function progress(){const rows=ensureDraft().exercises.flatMap(e=>e.rows),done=rows.filter(r=>r.done).length,p=rows.length?Math.round(done/rows.length*100):0;$("bar").style.width=p+"%";$("ring").style.setProperty("--p",p+"%");$("ringText").textContent=done+"/"+rows.length}
-let audio=null;
-function ring(){try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);g.gain.value=.12;o.frequency.value=880;o.start();o.stop(audio.currentTime+.5)}catch(e){}if(navigator.vibrate)navigator.vibrate(200)}
-function startTimer(){try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}state.timerEnd=Date.now()+REST;save();tick()}
-function tick(){
- const dock=$("dock");
- if(!state.timerEnd){$("clock").textContent="03:00";$("timerBar").style.width="0%";return}
- const left=Math.max(0,Math.ceil((state.timerEnd-Date.now())/1000));
- $("clock").textContent=pad(Math.floor(left/60))+":"+pad(left%60);$("timerBar").style.width=(100-left/(REST/1000)*100)+"%";dock.className="dock active";$("timerLabel").textContent="Отдых";
- if(!left){state.timerEnd=null;save();dock.className="dock ready";$("timerLabel").textContent="Готово к следующему подходу";$("timerBar").style.width="100%";ring()}}
-$("tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(!b)return;state.day=Number(b.dataset.day);save();render()});
-$("exercises").addEventListener("input",e=>{
- const t=e.target;if(!(t instanceof HTMLInputElement))return;const v=t.value.replace(",",".");
- if(t.dataset.step!==undefined){const key=state.day+"-"+Number(t.dataset.step);if(v===""){delete state.config[key]}else if(WRE.test(v)&&Number(v)>0){state.config[key]={step:Number(v)}}else{t.value=t.value.slice(0,-1);return}save();return}
- const f=t.dataset.f,i=Number(t.dataset.i),j=Number(t.dataset.j);if(!f)return;
- if(!(f==="w"?WRE:RRE).test(v)){t.value=t.value.slice(0,-1);return}
- t.value=v;const r=ensureDraft().exercises[i].rows[j];r[f]=v;r.done=false;const row=t.closest(".set");row.classList.remove("done");row.querySelector(".tick").textContent="○";save();progress()});
-$("exercises").addEventListener("click",e=>{
- const b=e.target.closest(".tick");if(!b)return;const r=ensureDraft().exercises[Number(b.dataset.i)].rows[Number(b.dataset.j)];
- if(!r.done&&(!(Number(r.w)>0)||!(Number(r.r)>=1))){notice("Укажи вес и повторы перед отметкой подхода.");setTimeout(()=>notice(""),2500);return}
- r.done=!r.done;save();if(r.done)startTimer();render()});
-$("finish").addEventListener("click",()=>{
- const d=state.day,dr=ensureDraft(),rows=dr.exercises.flatMap(e=>e.rows);
- if(!rows.some(r=>r.done)){notice("Сначала отметь хотя бы один подход.");setTimeout(()=>notice(""),2500);return}
- if(!confirm(rows.every(r=>r.done)?"Сохранить тренировку?":"Есть невыполненные подходы. Сохранить как есть?"))return;
- state.history.push(JSON.parse(JSON.stringify({day:d,time:new Date().toISOString(),phase:dr.phase,exercises:dr.exercises})));
- if(state.history.length>2000)state.history.shift();
- delete state.drafts[d];state.timerEnd=null;state.day=(d+1)%4;save();render();tick();scrollTo({top:0,behavior:"smooth"})});
-$("start").addEventListener("change",e=>{const v=e.target.value;if(!parseDate(v)){e.target.value=state.start;return}if(Object.keys(state.drafts).length&&!confirm("Незавершённые тренировки будут пересозданы. Продолжить?")){e.target.value=state.start;return}state.start=v;state.drafts={};save();render()});
-$("restart").addEventListener("click",startTimer);
-$("skip").addEventListener("click",()=>{state.timerEnd=null;save();$("dock").className="dock";$("timerLabel").textContent="Отдых";tick()});
-$("export").addEventListener("click",()=>{const u=URL.createObjectURL(new Blob([JSON.stringify(state)],{type:"application/json"}));const a=document.createElement("a");a.href=u;a.download="podhod-backup-"+todayStr()+".json";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)});
-$("import").addEventListener("click",()=>$("file").click());
-$("file").addEventListener("change",async e=>{
- const f=e.target.files[0];e.target.value="";if(!f)return;
- try{if(f.size>1000000)throw 0;const c=cleanState(JSON.parse(await f.text()));if(!c)throw 0;if(!confirm("Заменить текущие данные резервной копией?"))return;state=c;storageOK=true;notice("");save();render();tick()}catch(err){notice("Файл не подходит или повреждён. Данные не изменены.");setTimeout(()=>notice(""),3500)}});
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)tick()});
-setInterval(tick,500);render();tick();
-if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+let s={version:1,start:today(),day:0,history:[],drafts:{},config:{},timerEnd:null},canSave=true;
+try{let raw=localStorage.getItem(KEY);if(raw){if(raw.length>2000000)throw Error();s=clean(JSON.parse(raw))}}catch(e){canSave=false;$('notice').textContent='Не удалось загрузить данные. Старое хранилище не перезаписывается; импортируй резервную копию.'}
+function save(){if(!canSave)return;try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){canSave=false;$('notice').textContent='Сохранение недоступно. Сделай экспорт.'}}
+function phase(){let days=Math.max(0,Math.round((Date.parse(today())-Date.parse(s.start))/86400000)),week=Math.floor(days/7)+1,p=Math.min(3,Math.floor((week-1)/2));return{week,p,sets:stages[p]}}
+function last(d){return [...s.history].reverse().find(h=>h.day===d)}
+function draft(){if(s.drafts[s.day])return s.drafts[s.day];let ph=phase(),prev=last(s.day);let exercises=PLAN[s.day][1].map((ex,i)=>{let n=ph.sets[ex[1]],pr=prev?.exercises[i],w=pr?.rows[0].w??ex[4],step=s.config[s.day+'-'+i]?.step;let good=pr&&pr.rows.every(r=>r.done&&Number(r.r)>=ex[3]&&Number(r.w)>0&&Number(r.w)===Number(pr.rows[0].w));let increase=!!(good&&n<=pr.rows.length&&step);if(increase)w=String(Math.round((Number(w)+step)*100)/100);return{rows:Array.from({length:n},()=>({w,r:'',done:false})),suggested:increase,added:!!pr&&n>pr.rows.length}});s.drafts[s.day]={date:today(),phase:ph.p,exercises};save();return s.drafts[s.day]}
+function progress(){let rows=draft().exercises.flatMap(e=>e.rows),n=rows.filter(r=>r.done).length;$('progress').textContent=n+' из '+rows.length+' подходов';$('bar').value=n/rows.length*100}
+function render(){let ph=phase(),dr=draft(),prev=last(s.day);$('phase').textContent='НЕДЕЛЯ '+ph.week+' · ЭТАП '+(ph.p+1)+'/4'+(ph.week>8?' · ЦИКЛ ЗАВЕРШЁН':'');$('title').textContent=PLAN[s.day][0];$('start').value=s.start;$('tabs').replaceChildren();['Грудь','Спина','Плечи','Ноги'].forEach((t,i)=>{let b=node('button',i===s.day?'active':'',t);b.onclick=()=>{s.day=i;save();render()};$('tabs').append(b)});$('exercises').replaceChildren();
+ PLAN[s.day][1].forEach((ex,i)=>{let c=node('section','card');c.append(node('h2','',ex[0]),node('p','sub',dr.exercises[i].rows.length+' × '+ex[2]+'–'+ex[3]+' · '+(ex[1]?'Основное':'Изоляция')));c.append(node('p','muted','Прошлый раз: '+(prev?prev.exercises[i].rows.map(r=>(r.w||'—')+' кг × '+(r.r||'—')).join(' / '):'нет записи')));if(dr.exercises[i].suggested)c.append(node('p','hint','Предложена прибавка веса — проверь нагрузку.'));if(dr.exercises[i].added)c.append(node('p','hint','Добавлен подход — вес сохранён.'));let head=node('div','row');['№','кг','повторы',''].forEach(t=>head.append(node('small','',t)));c.append(head);
+ dr.exercises[i].rows.forEach((r,j)=>{let row=node('div','row'+(r.done?' done':''));row.append(node('small','',j+1));['w','r'].forEach(f=>{let inp=node('input');inp.value=r[f];inp.readOnly=true;inp.setAttribute('aria-label',(f==='w'?'Вес':'Повторы')+', '+ex[0]+', подход '+(j+1));inp.setAttribute('aria-haspopup','dialog');inp.onclick=()=>openPicker(i,j,f,inp);row.append(inp)});let b=node('button','',r.done?'✓':'○');b.setAttribute('aria-label','Отметить подход');b.onclick=()=>{if(!r.done&&(!(Number(r.w)>0)||!(Number(r.r)>0))){alert('Укажи вес и повторы.');return}r.done=!r.done;save();if(r.done)timerStart();render()};row.append(b);c.append(row)});
+ let lab=node('label','step','Шаг прибавки, кг'),inp=node('input');inp.inputMode='decimal';inp.maxLength=6;inp.placeholder='Не задан';inp.value=s.config[s.day+'-'+i]?.step??'';inp.onchange=()=>{let v=inp.value.replace(',','.');if(v==='')delete s.config[s.day+'-'+i];else if(/^\d+(\.\d{1,2})?$/.test(v)&&Number(v)>0&&Number(v)<=100)s.config[s.day+'-'+i]={step:Number(v)};else{alert('Шаг: больше 0 и не больше 100 кг.');inp.value=s.config[s.day+'-'+i]?.step??''}save()};lab.append(inp);c.append(lab);$('exercises').append(c)});progress();$('history').replaceChildren();s.history.slice(-30).reverse().forEach(h=>$('history').append(node('p','',new Date(h.time).toLocaleDateString('ru')+' · '+PLAN[h.day][0])))}
+let selectedTarget=null,values=[],ix=0;
+function pos(){return Math.max(0,Math.min(values.length-1,Math.round($('wheel').scrollTop/52)))}
+function paint(){ix=pos();Array.from($('wheel').children).forEach((n,i)=>{n.classList.toggle('selected',i===ix);n.setAttribute('aria-selected',String(i===ix))})}
+function openPicker(i,j,f,input){selectedTarget={i,j,f,input};let r=draft().exercises[i].rows[j],cur=Number(r[f])||0,step=f==='r'?1:(s.config[s.day+'-'+i]?.step||2.5);let max=f==='r'?100:Math.max(300,cur+step*20);values=[];for(let k=0;k<=Math.min(1499,Math.floor(max/step));k++)values.push(Math.round(k*step*100)/100);if(!values.includes(cur))values.push(cur);values.sort((a,b)=>a-b);$('pickerTitle').textContent=f==='r'?'Повторения':'Вес, кг';$('wheel').replaceChildren();values.forEach((v,k)=>{let n=node('div','option',String(v).replace('.',','));n.setAttribute('role','option');n.onclick=()=>$('wheel').scrollTo({top:k*52,behavior:'smooth'});$('wheel').append(n)});$('overlay').hidden=false;document.body.classList.add('no-scroll');$('wheel').scrollTop=values.indexOf(cur)*52;paint();$('wheel').focus({preventScroll:true})}
+function close(){let inp=selectedTarget?.input;$('overlay').hidden=true;document.body.classList.remove('no-scroll');selectedTarget=null;inp?.focus({preventScroll:true})}
+function apply(v){if(!selectedTarget)return;let {i,j,f}=selectedTarget,r=draft().exercises[i].rows[j];r[f]=String(v);r.done=false;save();close();render()}
+$('wheel').onscroll=()=>requestAnimationFrame(paint);$('wheel').onkeydown=e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();$('wheel').scrollTo({top:Math.max(0,Math.min(values.length-1,pos()+(e.key==='ArrowDown'?1:-1)))*52,behavior:'smooth'})}};$('done').onclick=()=>apply(values[pos()]);$('cancel').onclick=close;$('overlay').onclick=e=>{if(e.target===$('overlay'))close()};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('overlay').hidden)close()});
+$('manual').onclick=()=>{let t=selectedTarget;if(!t)return;let v=prompt('Введите значение',draft().exercises[t.i].rows[t.j][t.f]);if(v===null)return;v=v.trim().replace(',','.');if(!validNum(v,t.f==='r')||v===''||!Number.isFinite(Number(v))){alert('Некорректное число.');return}apply(Number(v))};
+let audio;function timerStart(){try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}s.timerEnd=Date.now()+180000;save();tick()}
+function tick(){if(!s.timerEnd){$('clock').textContent='03:00';return}let sec=Math.max(0,Math.ceil((s.timerEnd-Date.now())/1000));$('timerLabel').textContent='Отдых';$('clock').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');if(!sec){s.timerEnd=null;save();$('timerLabel').textContent='Отдых завершён';try{let o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);g.gain.value=.1;o.frequency.value=880;o.start();o.stop(audio.currentTime+.5)}catch(e){}}}
+$('restart').onclick=timerStart;$('skip').onclick=()=>{s.timerEnd=null;save();$('timerLabel').textContent='Отдых';tick()};setInterval(tick,500);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+$('finish').onclick=()=>{let d=draft(),rows=d.exercises.flatMap(e=>e.rows);if(!rows.some(r=>r.done)){alert('Отметь хотя бы один подход.');return}if(!confirm(rows.every(r=>r.done)?'Завершить тренировку?':'Есть невыполненные подходы. Сохранить как есть?'))return;s.history.push(JSON.parse(JSON.stringify({day:s.day,time:new Date().toISOString(),phase:d.phase,exercises:d.exercises})));if(s.history.length>2000)s.history.shift();delete s.drafts[s.day];s.day=(s.day+1)%4;s.timerEnd=null;save();render();tick();scrollTo(0,0)};
+$('start').onchange=e=>{if(!dateOK(e.target.value)){e.target.value=s.start;return}if(!confirm('Пересоздать незавершённые тренировки с новой датой?')){e.target.value=s.start;return}s.start=e.target.value;s.drafts={};save();render()};
+$('export').onclick=()=>{let u=URL.createObjectURL(new Blob([JSON.stringify(s)],{type:'application/json'})),a=node('a');a.href=u;a.download='podhod-backup-'+today()+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000)};$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{let f=e.target.files[0];e.target.value='';if(!f)return;try{if(f.size>2000000)throw Error();let v=clean(JSON.parse(await f.text()));if(!confirm('Заменить данные резервной копией?'))return;s=v;canSave=true;$('notice').textContent='';save();render();tick()}catch(e){alert('Резервная копия повреждена или не подходит. Данные не изменены.')}};
+render();tick();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
